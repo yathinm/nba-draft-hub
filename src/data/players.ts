@@ -28,9 +28,10 @@ export const mergedPlayers: Player[] = data.bio.map((player) => {
     (r) => r.playerId === player.playerId
   ) || {};
 
-  const scoutRankings: ScoutRankings = Object.fromEntries(
-    Object.entries(rankingsEntry).filter(([key]) => key !== "playerId")
-  );
+const scoutRankings = Object.fromEntries(
+  Object.entries(rankingsEntry).filter(([key]) => key !== "playerId")
+) as ScoutRankings;
+
 
   return {
     ...player,
