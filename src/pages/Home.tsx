@@ -33,7 +33,7 @@ export default function Home() {
           size="large"
           sx={{ mt: 4 }}
         >
-          View Big Board
+          View Draft Board
         </Button>
       </Box>
 

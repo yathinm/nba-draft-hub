@@ -6,27 +6,23 @@ import {
   CardContent,
   Typography,
   Container,
-  Chip,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
+  Paper,
+  TextField,
+  InputAdornment,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import NavBar from "../components/NavBar";
+import SportBasketballIcon from "@mui/icons-material/SportsBasketball";
+import StarIcon from "@mui/icons-material/Star";
+import SearchIcon from "@mui/icons-material/Search";
 
 const getAverageRank = (rankings: { [scout: string]: number | null }) => {
   const values = Object.values(rankings).filter((r): r is number => r !== null);
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : Infinity;
-};
-
-const getScoutConsensus = (rankings: { [scout: string]: number | null }) => {
-  const values = Object.values(rankings).filter((r): r is number => r !== null);
-  if (values.length < 2) return null;
-
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / values.length;
-  return variance;
 };
 
 export default function BigBoard() {
@@ -61,84 +57,154 @@ export default function BigBoard() {
 
   return (
     <>
-      <NavBar search={search} setSearch={setSearch} />
-
+      <NavBar />
       <Container maxWidth="lg">
         <Box py={4}>
-          <Box mb={4}>
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>Sort By</InputLabel>
-              <Select
-                value={sortBy}
-                label="Sort By"
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+          <Box 
+            sx={{
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'stretch', md: 'center' },
+              justifyContent: 'space-between',
+              mb: 4,
+              gap: 2,
+            }}
+          >
+            <Box>
+              <Typography 
+                variant="h4" 
+                component="h1" 
+                sx={{ 
+                  fontWeight: 800,
+                  color: 'primary.main',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  mb: 1,
+                }}
               >
-                <MenuItem value="consensus">Consensus Ranking</MenuItem>
-                <MenuItem value="highest">Highest Scout Ranking</MenuItem>
-                <MenuItem value="lowest">Lowest Scout Ranking</MenuItem>
-              </Select>
-            </FormControl>
+                <SportBasketballIcon sx={{ fontSize: 35 }} />
+                NBA Draft Board
+              </Typography>
+            </Box>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              alignItems: 'center',
+              flexWrap: { xs: 'wrap', md: 'nowrap' },
+            }}>
+              <TextField
+                size="small"
+                placeholder="Search prospects..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                sx={{ 
+                  minWidth: 200,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1,
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <FormControl 
+                size="small"
+                sx={{ 
+                  minWidth: 200,
+                  background: 'white',
+                  borderRadius: 1,
+                }}
+              >
+                <InputLabel>Sort By</InputLabel>
+                <Select
+                  value={sortBy}
+                  label="Sort By"
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                >
+                  <MenuItem value="consensus">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <StarIcon sx={{ fontSize: 18 }} />
+                      Consensus Ranking
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="highest">Highest Rank</MenuItem>
+                  <MenuItem value="lowest">Lowest Rank</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
           </Box>
 
-          {filteredPlayers.map((player, index) => {
-            const consensus = getScoutConsensus(player.scoutRankings);
-            const avgRank = getAverageRank(player.scoutRankings);
-            const scoutRankings = Object.entries(player.scoutRankings)
-              .filter(([, rank]) => rank !== null)
-              .sort(([, a], [, b]) => (a || 0) - (b || 0));
-
-            return (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {filteredPlayers.map((player, index) => (
               <Card
                 key={player.playerId}
                 sx={{ 
-                  mb: 3,
-                  cursor: "pointer",
-                  transition: "transform 0.2s",
-                  "&:hover": {
-                    transform: "translateY(-4px)",
-                  }
+                  borderRadius: 2,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  },
                 }}
                 component={Link}
                 to={`/player/${player.playerId}`}
               >
                 <CardContent>
-                  <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2 }}>
-                    <Box sx={{ flex: "0 0 auto", minWidth: { md: "300px" } }}>
-                      <Typography variant="h6" color="primary">
-                        {index + 1}. {player.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {player.currentTeam} | {player.height / 12} ft {player.height % 12} in
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Box display="flex" flexWrap="wrap" gap={1} mb={1}>
-                        {scoutRankings.map(([scout, rank]) => (
-                          <Chip
-                            key={scout}
-                            label={`${scout}: ${rank}`}
-                            color={
-                              rank && avgRank && rank < avgRank - 5
-                                ? "success"
-                                : rank && avgRank && rank > avgRank + 5
-                                ? "error"
-                                : "default"
-                            }
-                            size="small"
-                          />
-                        ))}
-                      </Box>
-                      {consensus !== null && consensus > 25 && (
-                        <Typography variant="body2" color="error">
-                          High variance in scout rankings
+                  <Box sx={{ 
+                    display: "flex", 
+                    flexDirection: { xs: "column", sm: "row" }, 
+                    gap: 2,
+                    alignItems: { xs: "flex-start", sm: "center" },
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: '250px' }}>
+                      <Paper
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '50%',
+                          background: (theme) => theme.palette.grey[100],
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {index + 1}
+                      </Paper>
+                      <Box>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            fontWeight: 600,
+                            fontSize: '1.1rem',
+                          }}
+                        >
+                          {player.name}
                         </Typography>
-                      )}
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                          }}
+                        >
+                          <SportBasketballIcon sx={{ fontSize: 14 }} />
+                          {player.currentTeam}
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
+          </Box>
         </Box>
       </Container>
     </>

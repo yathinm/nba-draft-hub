@@ -4,9 +4,30 @@ type ScoutRankings = { [scoutName: string]: number | null };
 
 interface GameStats {
   playerId: number;
-  pts?: number;
-  reb?: number;
-  ast?: number;
+  Season?: string;
+  League?: string;
+  Team?: string;
+  GP?: number;
+  GS?: number;
+  MP?: number;
+  FGM?: number;
+  FGA?: number;
+  "FG%"?: number;
+  "3PM"?: number;
+  "3PA"?: number;
+  "3P%"?: number;
+  FT?: number;
+  FTA?: number;
+  "FT%"?: number;
+  ORB?: number;
+  DRB?: number;
+  TRB?: number;
+  AST?: number;
+  STL?: number;
+  BLK?: number;
+  TOV?: number;
+  PF?: number;
+  PTS?: number;
 }
 
 interface Stats {
@@ -14,11 +35,23 @@ interface Stats {
     points: number;
     rebounds: number;
     assists: number;
+    steals: number;
+    blocks: number;
+    turnovers: number;
+    fgPercentage: number;
+    threePtPercentage: number;
+    ftPercentage: number;
+    minutes: number;
   };
   total: {
     points: number;
     rebounds: number;
     assists: number;
+    steals: number;
+    blocks: number;
+    turnovers: number;
+    gamesPlayed: number;
+    gamesStarted: number;
   };
 }
 
@@ -72,23 +105,63 @@ function computeStats(statLogs: GameStats[]): Stats | null {
   const total = {
     points: 0,
     rebounds: 0,
-    assists: 0
+    assists: 0,
+    steals: 0,
+    blocks: 0,
+    turnovers: 0,
+    gamesPlayed: 0,
+    gamesStarted: 0,
+    fgMade: 0,
+    fgAttempts: 0,
+    threePtMade: 0,
+    threePtAttempts: 0,
+    ftMade: 0,
+    ftAttempts: 0,
+    minutes: 0,
   };
 
   for (const game of statLogs) {
-    total.points += game.pts ?? 0;
-    total.rebounds += game.reb ?? 0;
-    total.assists += game.ast ?? 0;
+    total.points += game.PTS ?? 0;
+    total.rebounds += game.TRB ?? 0;
+    total.assists += game.AST ?? 0;
+    total.steals += game.STL ?? 0;
+    total.blocks += game.BLK ?? 0;
+    total.turnovers += game.TOV ?? 0;
+    total.gamesPlayed += game.GP ?? 0;
+    total.gamesStarted += game.GS ?? 0;
+    total.fgMade += game.FGM ?? 0;
+    total.fgAttempts += game.FGA ?? 0;
+    total.threePtMade += game["3PM"] ?? 0;
+    total.threePtAttempts += game["3PA"] ?? 0;
+    total.ftMade += game.FT ?? 0;
+    total.ftAttempts += game.FTA ?? 0;
+    total.minutes += game.MP ?? 0;
   }
 
-  const numGames = statLogs.length;
+  const numGames = total.gamesPlayed || statLogs.length;
 
   return {
-    total,
+    total: {
+      points: total.points,
+      rebounds: total.rebounds,
+      assists: total.assists,
+      steals: total.steals,
+      blocks: total.blocks,
+      turnovers: total.turnovers,
+      gamesPlayed: total.gamesPlayed,
+      gamesStarted: total.gamesStarted,
+    },
     perGame: {
       points: +(total.points / numGames).toFixed(1),
       rebounds: +(total.rebounds / numGames).toFixed(1),
-      assists: +(total.assists / numGames).toFixed(1)
+      assists: +(total.assists / numGames).toFixed(1),
+      steals: +(total.steals / numGames).toFixed(1),
+      blocks: +(total.blocks / numGames).toFixed(1),
+      turnovers: +(total.turnovers / numGames).toFixed(1),
+      fgPercentage: +(total.fgMade / total.fgAttempts * 100).toFixed(1) || 0,
+      threePtPercentage: +(total.threePtMade / total.threePtAttempts * 100).toFixed(1) || 0,
+      ftPercentage: +(total.ftMade / total.ftAttempts * 100).toFixed(1) || 0,
+      minutes: +(total.minutes / numGames).toFixed(1),
     }
   };
 }

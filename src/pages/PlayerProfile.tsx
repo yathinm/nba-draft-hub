@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { mergedPlayers } from "../data/players";
 import {
@@ -7,100 +7,101 @@ import {
   Typography,
   Card,
   CardContent,
-  Button,
-  TextField,
-  Rating,
-  Chip,
   IconButton,
+  ToggleButtonGroup,
+  ToggleButton,
+  TextField,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Tab,
-  Tabs,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import SportBasketballIcon from "@mui/icons-material/SportsBasketball";
+import AddIcon from "@mui/icons-material/Add";
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 
 interface ScoutingReport {
   id: string;
+  scoutName: string;
+  report: string;
   date: string;
-  scout: string;
   rating: number;
-  strengths: string;
-  weaknesses: string;
-  notes: string;
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface PerGameStats {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  fgPercentage: number;
+  threePtPercentage: number;
+  ftPercentage: number;
+  minutes: number;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`tabpanel-${index}`}
-      aria-labelledby={`tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
+interface TotalStats {
+  points: number;
+  rebounds: number;
+  assists: number;
+  steals: number;
+  blocks: number;
+  turnovers: number;
+  gamesPlayed: number;
+  gamesStarted: number;
 }
 
 export default function PlayerProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [tabValue, setTabValue] = useState(0);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [statsView, setStatsView] = useState<"perGame" | "total">("perGame");
   const [scoutingReports, setScoutingReports] = useState<ScoutingReport[]>([]);
-  const [newReport, setNewReport] = useState<Omit<ScoutingReport, "id" | "date">>({
-    scout: "",
-    rating: 0,
-    strengths: "",
-    weaknesses: "",
-    notes: "",
-  });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newReport, setNewReport] = useState({ scoutName: "", report: "", rating: 5 });
 
   const player = mergedPlayers.find((p) => p.playerId === Number(id));
 
   if (!player) {
     return (
       <Container>
-        <Typography>Player not found</Typography>
+        <Typography variant="h5" sx={{ mt: 4 }}>Player not found</Typography>
       </Container>
     );
   }
 
-  const handleAddReport = () => {
-    const report: ScoutingReport = {
-      id: Date.now().toString(),
-      date: new Date().toISOString().split("T")[0],
-      ...newReport,
-    };
-    setScoutingReports([...scoutingReports, report]);
-    setDialogOpen(false);
-    setNewReport({
-      scout: "",
-      rating: 0,
-      strengths: "",
-      weaknesses: "",
-      notes: "",
-    });
+  const handleStatsViewChange = (
+    event: React.MouseEvent<HTMLElement>,
+    newView: "perGame" | "total",
+  ) => {
+    if (newView !== null) {
+      setStatsView(newView);
+    }
   };
 
-  const avgRank = Object.values(player.scoutRankings)
-    .filter((r): r is number => r !== null)
-    .reduce((a, b) => a + b, 0) / Object.values(player.scoutRankings).filter((r) => r !== null).length;
+  const handleAddReport = () => {
+    if (newReport.scoutName && newReport.report) {
+      const report: ScoutingReport = {
+        id: Date.now().toString(),
+        scoutName: newReport.scoutName,
+        report: newReport.report,
+        rating: newReport.rating,
+        date: new Date().toLocaleDateString(),
+      };
+      setScoutingReports([...scoutingReports, report]);
+      setNewReport({ scoutName: "", report: "", rating: 5 });
+      setIsDialogOpen(false);
+    }
+  };
+
+  const stats = player.stats?.[statsView];
 
   return (
     <Container maxWidth="lg">
@@ -109,173 +110,319 @@ export default function PlayerProfile() {
           <IconButton onClick={() => navigate("/")} sx={{ mr: 2 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h4" component="h1">
+          <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <SportBasketballIcon sx={{ fontSize: 35 }} />
             {player.name}
           </Typography>
         </Box>
 
-        <Box mb={4}>
-          <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
-            <Tab label="Overview" />
-            <Tab label="Scouting Reports" />
-          </Tabs>
-        </Box>
-
-        <TabPanel value={tabValue} index={0}>
-          <Card>
-            <CardContent>
-              <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={4}>
-                {player.photoUrl && (
-                  <Box sx={{ width: { xs: "100%", md: 300 } }}>
-                    <img
-                      src={player.photoUrl}
-                      alt={player.name}
-                      style={{ width: "100%", height: "auto", borderRadius: 8 }}
-                    />
-                  </Box>
-                )}
-                <Box flex={1}>
-                  <Typography variant="h6" gutterBottom>
-                    Personal Information
-                  </Typography>
-                  <Box display="grid" gridTemplateColumns="auto 1fr" gap={2} mb={3}>
-                    <Typography color="text.secondary">Team:</Typography>
-                    <Typography>{player.currentTeam}</Typography>
-                    <Typography color="text.secondary">Height:</Typography>
-                    <Typography>{player.height / 12} ft {player.height % 12} in</Typography>
-                    <Typography color="text.secondary">Weight:</Typography>
-                    <Typography>{player.weight} lbs</Typography>
-                    <Typography color="text.secondary">Birth Date:</Typography>
-                    <Typography>{new Date(player.birthDate).toLocaleDateString()}</Typography>
-                    <Typography color="text.secondary">Hometown:</Typography>
-                    <Typography>
-                      {player.homeTown}
-                      {player.homeState ? `, ${player.homeState}` : ""}, {player.homeCountry}
-                    </Typography>
-                  </Box>
-
-                  <Typography variant="h6" gutterBottom>
-                    Scout Rankings
-                  </Typography>
-                  <Box display="flex" flexWrap="wrap" gap={1} mb={2}>
-                    {Object.entries(player.scoutRankings)
-                      .filter(([, rank]) => rank !== null)
-                      .map(([scout, rank]) => (
-                        <Chip
-                          key={scout}
-                          label={`${scout}: ${rank}`}
-                          color={
-                            rank && rank < avgRank - 5
-                              ? "success"
-                              : rank && rank > avgRank + 5
-                              ? "error"
-                              : "default"
-                          }
-                        />
-                      ))}
-                  </Box>
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={4}>
+              {player.photoUrl && (
+                <Box sx={{ width: { xs: "100%", md: 300 } }}>
+                  <img
+                    src={player.photoUrl}
+                    alt={player.name}
+                    style={{ width: "100%", height: "auto", borderRadius: 8 }}
+                  />
+                </Box>
+              )}
+              <Box flex={1}>
+                <Typography variant="h6" gutterBottom>
+                  Player Information
+                </Typography>
+                <Box display="grid" gridTemplateColumns="auto 1fr" gap={2} mb={3}>
+                  <Typography color="text.secondary">Team:</Typography>
+                  <Typography>{player.currentTeam}</Typography>
+                  <Typography color="text.secondary">Height:</Typography>
+                  <Typography>{player.height / 12} ft {player.height % 12} in</Typography>
+                  <Typography color="text.secondary">Weight:</Typography>
+                  <Typography>{player.weight} lbs</Typography>
+                  <Typography color="text.secondary">Birth Date:</Typography>
+                  <Typography>{new Date(player.birthDate).toLocaleDateString()}</Typography>
+                  <Typography color="text.secondary">Hometown:</Typography>
                   <Typography>
-                    Average Ranking: {avgRank.toFixed(1)}
+                    {player.homeTown}
+                    {player.homeState ? `, ${player.homeState}` : ""}, {player.homeCountry}
                   </Typography>
                 </Box>
               </Box>
-            </CardContent>
-          </Card>
-        </TabPanel>
-
-        <TabPanel value={tabValue} index={1}>
-          <Box mb={3}>
-            <Button
-              variant="contained"
-              onClick={() => setDialogOpen(true)}
-            >
-              Add Scouting Report
-            </Button>
-          </Box>
-
-          {scoutingReports.length === 0 ? (
-            <Typography color="text.secondary">
-              No scouting reports yet. Add one to get started.
-            </Typography>
-          ) : (
-            <Box display="flex" flexDirection="column" gap={2}>
-              {scoutingReports.map((report) => (
-                <Card key={report.id}>
-                  <CardContent>
-                    <Box display="flex" justifyContent="space-between" mb={2}>
-                      <Typography variant="h6">
-                        Report by {report.scout}
-                      </Typography>
-                      <Typography color="text.secondary">
-                        {report.date}
-                      </Typography>
-                    </Box>
-                    <Box mb={2}>
-                      <Typography component="legend">Rating</Typography>
-                      <Rating value={report.rating} readOnly />
-                    </Box>
-                    <Typography variant="h6" gutterBottom>
-                      Strengths
-                    </Typography>
-                    <Typography paragraph>
-                      {report.strengths}
-                    </Typography>
-                    <Typography variant="h6" gutterBottom>
-                      Weaknesses
-                    </Typography>
-                    <Typography paragraph>
-                      {report.weaknesses}
-                    </Typography>
-                    <Typography variant="h6" gutterBottom>
-                      Additional Notes
-                    </Typography>
-                    <Typography>
-                      {report.notes}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ))}
             </Box>
-          )}
-        </TabPanel>
+          </CardContent>
+        </Card>
 
-        <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle>New Scouting Report</DialogTitle>
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Statistics
+              </Typography>
+              <ToggleButtonGroup
+                value={statsView}
+                exclusive
+                onChange={handleStatsViewChange}
+                size="small"
+              >
+                <ToggleButton value="perGame">
+                  Per Game
+                </ToggleButton>
+                <ToggleButton value="total">
+                  Season
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {stats ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Main Stats */}
+                <Box sx={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                  gap: 3,
+                }}>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                      {stats.points}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500, opacity: 0.9 }}>
+                      {statsView === "perGame" ? "PPG" : "Total Points"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                      {stats.rebounds}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500, opacity: 0.9 }}>
+                      {statsView === "perGame" ? "RPG" : "Total Rebounds"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                    <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                      {stats.assists}
+                    </Typography>
+                    <Typography variant="body1" sx={{ fontWeight: 500, opacity: 0.9 }}>
+                      {statsView === "perGame" ? "APG" : "Total Assists"}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* Additional Stats */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
+                  {statsView === "perGame" && (
+                    <>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          {(stats as PerGameStats).minutes}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Minutes
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          {(stats as PerGameStats).fgPercentage}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          FG%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          {(stats as PerGameStats).threePtPercentage}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          3P%
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          {(stats as PerGameStats).ftPercentage}%
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          FT%
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+                  {statsView === "total" && (
+                    <>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          {(stats as TotalStats).gamesPlayed}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Games Played
+                        </Typography>
+                      </Box>
+                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                          {(stats as TotalStats).gamesStarted}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Games Started
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                      {stats.steals}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {statsView === "perGame" ? "SPG" : "Total Steals"}
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                      {stats.blocks}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {statsView === "perGame" ? "BPG" : "Total Blocks"}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <Typography color="text.secondary">
+                No statistics available
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Scouting Reports Section */}
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Scouting Reports
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setIsDialogOpen(true)}
+              >
+                Add Report
+              </Button>
+            </Box>
+
+            {scoutingReports.length > 0 ? (
+              <List>
+                {scoutingReports.map((report, index) => (
+                  <React.Fragment key={report.id}>
+                    <ListItem>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                {report.scoutName}
+                              </Typography>
+                              <Box 
+                                sx={{ 
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 0.5,
+                                  bgcolor: 'background.paper',
+                                  border: '1px solid',
+                                  borderColor: 'primary.main',
+                                  borderRadius: 2,
+                                  px: 1.5,
+                                  py: 0.5,
+                                }}
+                              >
+                                <StarIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                <Typography
+                                  variant="subtitle2"
+                                  sx={{
+                                    color: 'primary.main',
+                                    fontWeight: 600,
+                                    lineHeight: 1,
+                                  }}
+                                >
+                                  {report.rating}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {report.date}
+                            </Typography>
+                          </Box>
+                        }
+                        secondary={
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              mt: 1,
+                              color: 'text.primary',
+                              whiteSpace: 'pre-wrap'
+                            }}
+                          >
+                            {report.report}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                    {index < scoutingReports.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            ) : (
+              <Typography color="text.secondary">
+                No scouting reports available. Add one to get started.
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Add Scouting Report Dialog */}
+        <Dialog open={isDialogOpen} onClose={() => setIsDialogOpen(false)} maxWidth="md" fullWidth>
+          <DialogTitle>Add Scouting Report</DialogTitle>
           <DialogContent>
-            <Box display="flex" flexDirection="column" gap={3} py={2}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 2 }}>
               <TextField
                 label="Scout Name"
-                value={newReport.scout}
-                onChange={(e) => setNewReport({ ...newReport, scout: e.target.value })}
+                value={newReport.scoutName}
+                onChange={(e) => setNewReport({ ...newReport, scoutName: e.target.value })}
                 fullWidth
               />
-              <Box>
-                <Typography component="legend">Rating</Typography>
-                <Rating
-                  value={newReport.rating}
-                  onChange={(_, value) => setNewReport({ ...newReport, rating: value || 0 })}
-                />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary">
+                  Rating
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {[...Array(10)].map((_, index) => (
+                      <IconButton
+                        key={index}
+                        onClick={() => setNewReport({ ...newReport, rating: index + 1 })}
+                        sx={{ p: 0.5 }}
+                      >
+                        {index < newReport.rating ? (
+                          <StarIcon sx={{ color: 'primary.main' }} />
+                        ) : (
+                          <StarBorderIcon sx={{ color: 'primary.main' }} />
+                        )}
+                      </IconButton>
+                    ))}
+                  </Box>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      minWidth: 40,
+                      color: 'primary.main',
+                      fontWeight: 600 
+                    }}
+                  >
+                    {newReport.rating}/10
+                  </Typography>
+                </Box>
               </Box>
               <TextField
-                label="Strengths"
-                value={newReport.strengths}
-                onChange={(e) => setNewReport({ ...newReport, strengths: e.target.value })}
-                multiline
-                rows={4}
-                fullWidth
-              />
-              <TextField
-                label="Weaknesses"
-                value={newReport.weaknesses}
-                onChange={(e) => setNewReport({ ...newReport, weaknesses: e.target.value })}
-                multiline
-                rows={4}
-                fullWidth
-              />
-              <TextField
-                label="Additional Notes"
-                value={newReport.notes}
-                onChange={(e) => setNewReport({ ...newReport, notes: e.target.value })}
+                label="Scouting Report"
+                value={newReport.report}
+                onChange={(e) => setNewReport({ ...newReport, report: e.target.value })}
                 multiline
                 rows={4}
                 fullWidth
@@ -283,11 +430,11 @@ export default function PlayerProfile() {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => setIsDialogOpen(false)}>Cancel</Button>
             <Button
               onClick={handleAddReport}
               variant="contained"
-              disabled={!newReport.scout || !newReport.rating}
+              disabled={!newReport.scoutName || !newReport.report}
             >
               Add Report
             </Button>
