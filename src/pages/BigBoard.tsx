@@ -11,8 +11,6 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  useTheme,
-  useMediaQuery,
 } from "@mui/material";
 import { Link } from "react-router-dom";
 import NavBar from "../components/NavBar";
@@ -34,8 +32,6 @@ const getScoutConsensus = (rankings: { [scout: string]: number | null }) => {
 export default function BigBoard() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"consensus" | "highest" | "lowest">("consensus");
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const sortPlayers = (players: typeof mergedPlayers) => {
     return [...players].sort((a, b) => {

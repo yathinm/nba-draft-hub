@@ -44,11 +44,21 @@ interface Player {
   stats: Stats | null;
 }
 
+type RawPlayer = Omit<Player, "scoutRankings" | "stats">;
+
+interface RawData {
+  bio: RawPlayer[];
+  scoutRankings: Array<{ playerId: number } & ScoutRankings>;
+  stats: GameStats[];
+}
+
+const rawData = data as unknown as RawData;
+
 // Group all stat logs by playerId
 const playerStatsMap: { [playerId: number]: GameStats[] } = {};
-// Only process stats if they exist
-if (Array.isArray(data.stats)) {
-  for (const stat of data.stats as GameStats[]) {
+
+if (Array.isArray(rawData.stats)) {
+  for (const stat of rawData.stats) {
     if (!playerStatsMap[stat.playerId]) {
       playerStatsMap[stat.playerId] = [];
     }
@@ -83,8 +93,8 @@ function computeStats(statLogs: GameStats[]): Stats | null {
   };
 }
 
-export const mergedPlayers: Player[] = data.bio.map((player) => {
-  const rankingsEntry = data.scoutRankings.find(
+export const mergedPlayers: Player[] = rawData.bio.map((player) => {
+  const rankingsEntry = rawData.scoutRankings.find(
     (r) => r.playerId === player.playerId
   ) || {};
 
