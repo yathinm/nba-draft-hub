@@ -78,7 +78,7 @@ export default function PlayerProfile() {
   }
 
   const handleStatsViewChange = (
-    event: React.MouseEvent<HTMLElement>,
+    _event: React.MouseEvent<HTMLElement>,
     newView: "perGame" | "total",
   ) => {
     if (newView !== null) {
