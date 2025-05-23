@@ -1,65 +1,150 @@
-
+import { useState } from "react";
 import { mergedPlayers } from "../data/players";
 import {
   Box,
   Card,
   CardContent,
   Typography,
-  Container
+  Container,
+  Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { Link } from "react-router-dom";
+import NavBar from "../components/NavBar";
 
 const getAverageRank = (rankings: { [scout: string]: number | null }) => {
-  const values = Object.values(rankings).filter((r): r is number => typeof r === "number");
+  const values = Object.values(rankings).filter((r): r is number => r !== null);
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : Infinity;
 };
 
-const getHighLowIndicator = (rankings: { [scout: string]: number | null }, rank: number) => {
-  const values = Object.values(rankings).filter((r): r is number => typeof r === "number");
-  if (rank <= Math.min(...values)) return "⬆️ High";
-  if (rank >= Math.max(...values)) return "⬇️ Low";
-  return "";
+const getScoutConsensus = (rankings: { [scout: string]: number | null }) => {
+  const values = Object.values(rankings).filter((r): r is number => r !== null);
+  if (values.length < 2) return null;
+
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / values.length;
+  return variance;
 };
 
 export default function BigBoard() {
-  const sortedPlayers = [...mergedPlayers].sort(
-    (a, b) => getAverageRank(a.scoutRankings) - getAverageRank(b.scoutRankings)
-  );
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"consensus" | "highest" | "lowest">("consensus");
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const sortPlayers = (players: typeof mergedPlayers) => {
+    return [...players].sort((a, b) => {
+      if (sortBy === "consensus") {
+        return getAverageRank(a.scoutRankings) - getAverageRank(b.scoutRankings);
+      }
+
+      const aRankings = Object.values(a.scoutRankings).filter((r): r is number => r !== null);
+      const bRankings = Object.values(b.scoutRankings).filter((r): r is number => r !== null);
+
+      if (sortBy === "highest") {
+        const aHighest = Math.min(...aRankings);
+        const bHighest = Math.min(...bRankings);
+        return aHighest - bHighest;
+      }
+
+      const aLowest = Math.max(...aRankings);
+      const bLowest = Math.max(...bRankings);
+      return aLowest - bLowest;
+    });
+  };
+
+  const filteredPlayers = sortPlayers(mergedPlayers)
+    .filter((player) =>
+      player.name.toLowerCase().includes(search.toLowerCase())
+    );
 
   return (
-    <Container maxWidth="md">
-      <Box py={4}>
-        <Typography variant="h4" gutterBottom>
-          NBA Draft Big Board
-        </Typography>
+    <>
+      <NavBar search={search} setSearch={setSearch} />
 
-        {sortedPlayers.map((player, index) => (
-          <Card
-            key={player.playerId}
-            sx={{ mb: 3, cursor: "pointer" }}
-            component={Link}
-            to={`/player/${player.playerId}`}
-          >
-            <CardContent>
-              <Typography variant="h6">
-                {index + 1}. {player.name} — {player.currentTeam}
-              </Typography>
-              <Typography variant="body2">
-                Avg Rank: {getAverageRank(player.scoutRankings).toFixed(2)}
-              </Typography>
-              <ul>
-                {Object.entries(player.scoutRankings).map(([scout, rank]) =>
-                  rank != null ? (
-                    <li key={scout}>
-                      {scout}: {rank} {getHighLowIndicator(player.scoutRankings, rank)}
-                    </li>
-                  ) : null
-                )}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
-      </Box>
-    </Container>
+      <Container maxWidth="lg">
+        <Box py={4}>
+          <Box mb={4}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>Sort By</InputLabel>
+              <Select
+                value={sortBy}
+                label="Sort By"
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              >
+                <MenuItem value="consensus">Consensus Ranking</MenuItem>
+                <MenuItem value="highest">Highest Scout Ranking</MenuItem>
+                <MenuItem value="lowest">Lowest Scout Ranking</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          {filteredPlayers.map((player, index) => {
+            const consensus = getScoutConsensus(player.scoutRankings);
+            const avgRank = getAverageRank(player.scoutRankings);
+            const scoutRankings = Object.entries(player.scoutRankings)
+              .filter(([, rank]) => rank !== null)
+              .sort(([, a], [, b]) => (a || 0) - (b || 0));
+
+            return (
+              <Card
+                key={player.playerId}
+                sx={{ 
+                  mb: 3,
+                  cursor: "pointer",
+                  transition: "transform 0.2s",
+                  "&:hover": {
+                    transform: "translateY(-4px)",
+                  }
+                }}
+                component={Link}
+                to={`/player/${player.playerId}`}
+              >
+                <CardContent>
+                  <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, gap: 2 }}>
+                    <Box sx={{ flex: "0 0 auto", minWidth: { md: "300px" } }}>
+                      <Typography variant="h6" color="primary">
+                        {index + 1}. {player.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {player.currentTeam} | {player.height / 12} ft {player.height % 12} in
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Box display="flex" flexWrap="wrap" gap={1} mb={1}>
+                        {scoutRankings.map(([scout, rank]) => (
+                          <Chip
+                            key={scout}
+                            label={`${scout}: ${rank}`}
+                            color={
+                              rank && avgRank && rank < avgRank - 5
+                                ? "success"
+                                : rank && avgRank && rank > avgRank + 5
+                                ? "error"
+                                : "default"
+                            }
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                      {consensus !== null && consensus > 25 && (
+                        <Typography variant="body2" color="error">
+                          High variance in scout rankings
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </Box>
+      </Container>
+    </>
   );
 }
