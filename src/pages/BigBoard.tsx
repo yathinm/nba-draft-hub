@@ -195,7 +195,6 @@ export default function BigBoard() {
                             gap: 0.5,
                           }}
                         >
-                          <SportBasketballIcon sx={{ fontSize: 14 }} />
                           {player.currentTeam}
                         </Typography>
                       </Box>

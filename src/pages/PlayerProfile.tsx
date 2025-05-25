@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { mergedPlayers } from "../data/players";
+import combineData from "../data/intern_project_data.json";
 import {
   Box,
   Container,
@@ -20,12 +21,12 @@ import {
   ListItem,
   ListItemText,
   Divider,
+  Paper,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SportBasketballIcon from "@mui/icons-material/SportsBasketball";
-import AddIcon from "@mui/icons-material/Add";
 import StarIcon from '@mui/icons-material/Star';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
+import AddIcon from "@mui/icons-material/Add";
 
 interface ScoutingReport {
   id: string;
@@ -35,7 +36,41 @@ interface ScoutingReport {
   rating: number;
 }
 
-interface PerGameStats {
+interface GameStats {
+  playerId: number;
+  gameId: number;
+  season: number;
+  league: string;
+  date: string;
+  team: string;
+  opponent: string;
+  gp: number;
+  gs: number;
+  timePlayed: string;
+  fgm: number;
+  fga: number;
+  "fg%": number | null;
+  tpm: number;
+  tpa: number;
+  "tp%": number | null;
+  ftm: number;
+  fta: number;
+  "ft%": number | null;
+  oreb: number;
+  dreb: number;
+  reb: number;
+  ast: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  pf: number;
+  pts: number;
+  plusMinus: number;
+}
+
+interface PlayerStats {
+  gamesPlayed: number;
+  gamesStarted: number;
   points: number;
   rebounds: number;
   assists: number;
@@ -45,18 +80,29 @@ interface PerGameStats {
   fgPercentage: number;
   threePtPercentage: number;
   ftPercentage: number;
-  minutes: number;
 }
 
-interface TotalStats {
-  points: number;
-  rebounds: number;
-  assists: number;
-  steals: number;
-  blocks: number;
-  turnovers: number;
-  gamesPlayed: number;
-  gamesStarted: number;
+interface ProjectData {
+  bio: Array<{ playerId: number; [key: string]: unknown }>;
+  measurements: CombineStats[];
+  game_logs: GameStats[];
+}
+
+interface CombineStats {
+  playerId: number;
+  heightNoShoes: number;
+  heightShoes: number;
+  wingspan: number;
+  reach: number;
+  maxVertical: number | null;
+  noStepVertical: number | null;
+  weight: number | null;
+  bodyFat: number | null;
+  handLength: number | null;
+  handWidth: number | null;
+  agility: number | null;
+  sprint: number | null;
+  shuttleBest: number | null;
 }
 
 export default function PlayerProfile() {
@@ -68,6 +114,8 @@ export default function PlayerProfile() {
   const [newReport, setNewReport] = useState({ scoutName: "", report: "", rating: 5 });
 
   const player = mergedPlayers.find((p) => p.playerId === Number(id));
+  const combineStats = (combineData as unknown as ProjectData).measurements.find((stats) => stats.playerId === Number(id));
+  const playerGames = (combineData as unknown as ProjectData).game_logs?.filter((game) => game.playerId === Number(id)) || [];
 
   if (!player) {
     return (
@@ -101,7 +149,59 @@ export default function PlayerProfile() {
     }
   };
 
-  const stats = player.stats?.[statsView];
+  const calculateAverages = (games: GameStats[]): PlayerStats | null => {
+    if (!games.length) return null;
+    
+    const totals = games.reduce((acc, game) => ({
+      gamesPlayed: acc.gamesPlayed + 1,
+      gamesStarted: acc.gamesStarted + (game.gs ? 1 : 0),
+      points: acc.points + game.pts,
+      rebounds: acc.rebounds + game.reb,
+      assists: acc.assists + game.ast,
+      steals: acc.steals + game.stl,
+      blocks: acc.blocks + game.blk,
+      turnovers: acc.turnovers + game.tov,
+      fgm: acc.fgm + game.fgm,
+      fga: acc.fga + game.fga,
+      tpm: acc.tpm + game.tpm,
+      tpa: acc.tpa + game.tpa,
+      ftm: acc.ftm + game.ftm,
+      fta: acc.fta + game.fta,
+    }), {
+      gamesPlayed: 0,
+      gamesStarted: 0,
+      points: 0,
+      rebounds: 0,
+      assists: 0,
+      steals: 0,
+      blocks: 0,
+      turnovers: 0,
+      fgm: 0,
+      fga: 0,
+      tpm: 0,
+      tpa: 0,
+      ftm: 0,
+      fta: 0,
+    });
+
+    const baseStats = {
+      gamesPlayed: totals.gamesPlayed,
+      gamesStarted: totals.gamesStarted,
+      points: statsView === 'perGame' ? totals.points / totals.gamesPlayed : totals.points,
+      rebounds: statsView === 'perGame' ? totals.rebounds / totals.gamesPlayed : totals.rebounds,
+      assists: statsView === 'perGame' ? totals.assists / totals.gamesPlayed : totals.assists,
+      steals: statsView === 'perGame' ? totals.steals / totals.gamesPlayed : totals.steals,
+      blocks: statsView === 'perGame' ? totals.blocks / totals.gamesPlayed : totals.blocks,
+      turnovers: statsView === 'perGame' ? totals.turnovers / totals.gamesPlayed : totals.turnovers,
+      fgPercentage: (totals.fgm / totals.fga) * 100 || 0,
+      threePtPercentage: (totals.tpm / totals.tpa) * 100 || 0,
+      ftPercentage: (totals.ftm / totals.fta) * 100 || 0,
+    };
+
+    return baseStats;
+  };
+
+  const stats = calculateAverages(playerGames);
 
   return (
     <Container maxWidth="lg">
@@ -111,7 +211,6 @@ export default function PlayerProfile() {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SportBasketballIcon sx={{ fontSize: 35 }} />
             {player.name}
           </Typography>
         </Box>
@@ -136,7 +235,7 @@ export default function PlayerProfile() {
                   <Typography color="text.secondary">Team:</Typography>
                   <Typography>{player.currentTeam}</Typography>
                   <Typography color="text.secondary">Height:</Typography>
-                  <Typography>{player.height / 12} ft {player.height % 12} in</Typography>
+                  <Typography>{Math.floor(player.height / 12)} ft {player.height % 12} in</Typography>
                   <Typography color="text.secondary">Weight:</Typography>
                   <Typography>{player.weight} lbs</Typography>
                   <Typography color="text.secondary">Birth Date:</Typography>
@@ -149,6 +248,74 @@ export default function PlayerProfile() {
                 </Box>
               </Box>
             </Box>
+          </CardContent>
+        </Card>
+
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Combine Measurements & Testing
+            </Typography>
+            {combineStats ? (
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+                {/* Measurements */}
+                <Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
+                      Measurements
+                    </Typography>
+                    <Box display="grid" gridTemplateColumns="auto 1fr" gap={2}>
+                      <Typography color="text.secondary">Height (No Shoes):</Typography>
+                      <Typography>{Math.floor(combineStats.heightNoShoes / 12)} ft {Math.round(combineStats.heightNoShoes % 12)} in</Typography>
+                      
+                      <Typography color="text.secondary">Height (In Shoes):</Typography>
+                      <Typography>{Math.floor(combineStats.heightShoes / 12)} ft {Math.round(combineStats.heightShoes % 12)} in</Typography>
+                      
+                      <Typography color="text.secondary">Wingspan:</Typography>
+                      <Typography>{combineStats.wingspan ? `${Math.floor(combineStats.wingspan / 12)} ft ${Math.round(combineStats.wingspan % 12)} in` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">Standing Reach:</Typography>
+                      <Typography>{combineStats.reach ? `${Math.floor(combineStats.reach / 12)} ft ${Math.round(combineStats.reach % 12)} in` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">Hand Length:</Typography>
+                      <Typography>{combineStats.handLength ? `${combineStats.handLength} in` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">Hand Width:</Typography>
+                      <Typography>{combineStats.handWidth ? `${combineStats.handWidth} in` : 'N/A'}</Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Athletic Testing */}
+                <Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
+                      Athletic Testing
+                    </Typography>
+                    <Box display="grid" gridTemplateColumns="auto 1fr" gap={2}>
+                      <Typography color="text.secondary">Max Vertical:</Typography>
+                      <Typography>{combineStats.maxVertical ? `${combineStats.maxVertical} in` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">No Step Vertical:</Typography>
+                      <Typography>{combineStats.noStepVertical ? `${combineStats.noStepVertical} in` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">Lane Agility:</Typography>
+                      <Typography>{combineStats.agility ? `${combineStats.agility} sec` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">Sprint:</Typography>
+                      <Typography>{combineStats.sprint ? `${combineStats.sprint} sec` : 'N/A'}</Typography>
+                      
+                      <Typography color="text.secondary">Shuttle:</Typography>
+                      <Typography>{combineStats.shuttleBest ? `${combineStats.shuttleBest} sec` : 'N/A'}</Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            ) : (
+              <Typography color="text.secondary">
+                No combine data available
+              </Typography>
+            )}
           </CardContent>
         </Card>
 
@@ -181,106 +348,97 @@ export default function PlayerProfile() {
                   gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
                   gap: 3,
                 }}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                  <Paper elevation={3} sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
                     <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
-                      {stats.points}
+                      {statsView === 'perGame' ? stats.points.toFixed(1) : Math.round(stats.points)}
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500, opacity: 0.9 }}>
                       {statsView === "perGame" ? "PPG" : "Total Points"}
                     </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                  </Paper>
+                  <Paper elevation={3} sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
                     <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
-                      {stats.rebounds}
+                      {statsView === 'perGame' ? stats.rebounds.toFixed(1) : Math.round(stats.rebounds)}
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500, opacity: 0.9 }}>
                       {statsView === "perGame" ? "RPG" : "Total Rebounds"}
                     </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                  </Paper>
+                  <Paper elevation={3} sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
                     <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
-                      {stats.assists}
+                      {statsView === 'perGame' ? stats.assists.toFixed(1) : Math.round(stats.assists)}
                     </Typography>
                     <Typography variant="body1" sx={{ fontWeight: 500, opacity: 0.9 }}>
                       {statsView === "perGame" ? "APG" : "Total Assists"}
                     </Typography>
-                  </Box>
+                  </Paper>
                 </Box>
 
                 {/* Additional Stats */}
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }, gap: 2 }}>
-                  {statsView === "perGame" && (
+                  {statsView === "perGame" ? (
                     <>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                          {(stats as PerGameStats).minutes}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Minutes
-                        </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                          {(stats as PerGameStats).fgPercentage}%
+                          {stats.fgPercentage.toFixed(1)}%
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           FG%
                         </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                      </Paper>
+                      <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                          {(stats as PerGameStats).threePtPercentage}%
+                          {stats.threePtPercentage.toFixed(1)}%
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           3P%
                         </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                      </Paper>
+                      <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                          {(stats as PerGameStats).ftPercentage}%
+                          {stats.ftPercentage.toFixed(1)}%
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           FT%
                         </Typography>
-                      </Box>
+                      </Paper>
                     </>
-                  )}
-                  {statsView === "total" && (
+                  ) : (
                     <>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                      <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                          {(stats as TotalStats).gamesPlayed}
+                          {stats.gamesPlayed}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           Games Played
                         </Typography>
-                      </Box>
-                      <Box sx={{ textAlign: 'center', p: 2 }}>
+                      </Paper>
+                      <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                          {(stats as TotalStats).gamesStarted}
+                          {stats.gamesStarted}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           Games Started
                         </Typography>
-                      </Box>
+                      </Paper>
                     </>
                   )}
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                  <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                      {stats.steals}
+                      {statsView === 'perGame' ? stats.steals.toFixed(1) : Math.round(stats.steals)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {statsView === "perGame" ? "SPG" : "Total Steals"}
                     </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', p: 2 }}>
+                  </Paper>
+                  <Paper elevation={2} sx={{ textAlign: 'center', p: 2 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                      {stats.blocks}
+                      {statsView === 'perGame' ? stats.blocks.toFixed(1) : Math.round(stats.blocks)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {statsView === "perGame" ? "BPG" : "Total Blocks"}
                     </Typography>
-                  </Box>
+                  </Paper>
                 </Box>
               </Box>
             ) : (

@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { Link, useLocation } from "react-router-dom";
 import MenuIcon from "@mui/icons-material/Menu";
-import SportBasketballIcon from "@mui/icons-material/SportsBasketball";
+import SportsBasketballIcon from '@mui/icons-material/SportsBasketball';
 import { useState } from "react";
 
 interface LayoutProps {
@@ -106,41 +106,13 @@ export default function Layout({ children }: LayoutProps) {
               </IconButton>
             )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box
+              <SportsBasketballIcon
                 sx={{
-                  position: 'relative',
-                  display: 'inline-flex',
-                  "&::after": {
-                    content: '""',
-                    position: 'absolute',
-                    top: -2,
-                    left: -2,
-                    right: -2,
-                    bottom: -2,
-                    background: 'linear-gradient(45deg, #C8102E, #1D428A)',
-                    borderRadius: '50%',
-                    zIndex: -1,
-                    opacity: 0.5,
-                  }
+                  fontSize: 40,
+                  color: 'primary.main',
+                  filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
                 }}
-              >
-                <SportBasketballIcon 
-                  sx={{ 
-                    color: 'secondary.main',
-                    fontSize: '2.5rem',
-                    animation: 'spin 4s linear infinite',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-                    '@keyframes spin': {
-                      '0%': {
-                        transform: 'rotate(0deg)',
-                      },
-                      '100%': {
-                        transform: 'rotate(360deg)',
-                      },
-                    },
-                  }} 
-                />
-              </Box>
+              />
               <Typography
                 variant="h6"
                 component={Link}
@@ -244,12 +216,12 @@ export default function Layout({ children }: LayoutProps) {
           borderBottom: '1px solid rgba(255,255,255,0.1)',
           background: 'rgba(0,0,0,0.1)',
         }}>
-          <SportBasketballIcon 
-            sx={{ 
+          <SportsBasketballIcon
+            sx={{
+              fontSize: 40,
               color: 'white',
-              fontSize: '2rem',
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
-            }} 
+            }}
           />
           <Typography 
             variant="h6" 
@@ -304,9 +276,9 @@ export default function Layout({ children }: LayoutProps) {
                 }
               }}
             >
-              <SportBasketballIcon 
-                sx={{ 
-                  fontSize: '2.5rem',
+              <SportsBasketballIcon
+                sx={{
+                  fontSize: 40,
                   color: 'white',
                   filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))',
                 }}

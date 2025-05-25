@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Ball -->
+  <circle cx="50" cy="50" r="45" fill="#f85d00"/>
+  
+  <!-- Seams -->
+  <path d="M50,5 A45,45 0 0,1 50,95" fill="none" stroke="#000" stroke-width="2" opacity="0.3"/>
+  <path d="M5,50 A45,45 0 0,0 95,50" fill="none" stroke="#000" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Curved seams -->
+  <path d="M26,12 Q50,50 26,88" fill="none" stroke="#000" stroke-width="2" opacity="0.3"/>
+  <path d="M74,12 Q50,50 74,88" fill="none" stroke="#000" stroke-width="2" opacity="0.3"/>
+</svg> 
