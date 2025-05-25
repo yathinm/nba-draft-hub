@@ -30,24 +30,13 @@ export default function BigBoard() {
   const [sortBy, setSortBy] = useState<"consensus" | "highest" | "lowest">("consensus");
 
   const sortPlayers = (players: typeof mergedPlayers) => {
-    return [...players].sort((a, b) => {
-      if (sortBy === "consensus") {
-        return getAverageRank(a.scoutRankings) - getAverageRank(b.scoutRankings);
-      }
+    // First sort by consensus ranking and add original index
+    const sortedPlayers = [...players]
+      .sort((a, b) => getAverageRank(a.scoutRankings) - getAverageRank(b.scoutRankings))
+      .map((player, index) => ({ ...player, originalRank: index + 1 }));
 
-      const aRankings = Object.values(a.scoutRankings).filter((r): r is number => r !== null);
-      const bRankings = Object.values(b.scoutRankings).filter((r): r is number => r !== null);
-
-      if (sortBy === "highest") {
-        const aHighest = Math.min(...aRankings);
-        const bHighest = Math.min(...bRankings);
-        return aHighest - bHighest;
-      }
-
-      const aLowest = Math.max(...aRankings);
-      const bLowest = Math.max(...bRankings);
-      return aLowest - bLowest;
-    });
+    // If lowest is selected, reverse the order but keep original rank
+    return sortBy === "lowest" ? sortedPlayers.reverse() : sortedPlayers;
   };
 
   const filteredPlayers = sortPlayers(mergedPlayers)
@@ -129,18 +118,17 @@ export default function BigBoard() {
                   <MenuItem value="consensus">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <StarIcon sx={{ fontSize: 18 }} />
-                      Consensus Ranking
+                      Highest to Lowest
                     </Box>
                   </MenuItem>
-                  <MenuItem value="highest">Highest Rank</MenuItem>
-                  <MenuItem value="lowest">Lowest Rank</MenuItem>
+                  <MenuItem value="lowest">Lowest to Highest</MenuItem>
                 </Select>
               </FormControl>
             </Box>
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {filteredPlayers.map((player, index) => (
+            {filteredPlayers.map((player) => (
               <Card
                 key={player.playerId}
                 sx={{ 
@@ -174,7 +162,7 @@ export default function BigBoard() {
                           fontWeight: 'bold',
                         }}
                       >
-                        {index + 1}
+                        {player.originalRank}
                       </Paper>
                       <Box>
                         <Typography 

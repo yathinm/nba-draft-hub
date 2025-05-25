@@ -207,7 +207,7 @@ export default function PlayerProfile() {
     <Container maxWidth="lg">
       <Box py={4}>
         <Box display="flex" alignItems="center" mb={4}>
-          <IconButton onClick={() => navigate("/")} sx={{ mr: 2 }}>
+          <IconButton onClick={() => navigate("/big-board")} sx={{ mr: 2 }}>
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h4" component="h1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
