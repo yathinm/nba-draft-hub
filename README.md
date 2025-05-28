@@ -1,5 +1,6 @@
 NBA Draft Hub is a web app that helps users explore NBA draft prospects and their stats. 
-Live Site: nba-draft-hub.vercel.app
+
+Live Site: nba-draft-hub.vercel.app 
 
 Features
 - View player profiles with key stats
